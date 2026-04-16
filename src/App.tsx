@@ -13,6 +13,8 @@ type ReceiptRow = {
   date: string
   name: string
   flatShopNo: string
+  paymentForMonth: string
+  paymentMode: string
   rupeesText: string
   cashOrChequeNo: string
   dated: string
@@ -35,6 +37,8 @@ const FIELD_LABELS: Record<string, string> = {
   date: 'Date',
   name: 'Name',
   flatShopNo: 'Flat / Shop No',
+  paymentForMonth: 'Payment For Month',
+  paymentMode: 'Payment Mode',
   rupeesText: 'Rupees (Text)',
   cashOrChequeNo: 'Cash / Cheque No',
   dated: 'Dated',
@@ -54,6 +58,8 @@ const FIELD_ALIASES: Record<string, string[]> = {
   date: ['date', 'receipt date', 'payment date'],
   name: ['name', 'member name', 'owner name', 'customer name'],
   flatShopNo: ['flat / shop no', 'flat/shop no', 'flat no', 'shop no', 'unit no', 'flatshopno'],
+  paymentForMonth: ['payment for month', 'payment month', 'month', 'for month', 'billing month'],
+  paymentMode: ['payment mode', 'mode', 'payment type', 'mode of payment'],
   rupeesText: ['rupees', 'amount in words', 'rupees text'],
   cashOrChequeNo: ['cash / cheque no', 'cheque no', 'cash no', 'instrument no'],
   dated: ['dated', 'cheque date'],
@@ -88,6 +94,24 @@ function formatDate(value: string): string {
   const month = dt.toLocaleString('en-US', { month: 'short' })
   const year = dt.getFullYear()
   return `${day}-${month}-${year}`
+}
+
+function formatPaymentMonth(value: string, fallbackDate: string): string {
+  const rawValue = value.trim()
+  if (rawValue) {
+    const parsedDate = new Date(rawValue)
+    if (!Number.isNaN(parsedDate.getTime())) {
+      return parsedDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })
+    }
+    return rawValue
+  }
+
+  const fallback = new Date(fallbackDate)
+  if (!Number.isNaN(fallback.getTime())) {
+    return fallback.toLocaleString('en-US', { month: 'long', year: 'numeric' })
+  }
+
+  return ''
 }
 
 function toIndianWords(value: number): string {
@@ -164,9 +188,9 @@ function downloadErrorCsv(errors: RowError[]): void {
 
 function downloadSampleCsv(): void {
   const sample = [
-    'Receipt No,Date,Name,Flat / Shop No,Rupees,Cash / Cheque No,Dated,Bank,Maint. Contribution,Share Capital,Entrance Fees,Developments Fund,Penalty Interest,Total Amount',
-    'R-1001,2026-04-01,Amit Shah,A-101,,CHQ-8891,2026-04-01,HDFC,2500,1000,500,750,250,5000',
-    'R-1002,2026-04-01,Neha Desai,B-202,,CHQ-8892,2026-04-01,ICICI,3000,1000,500,1000,500,6000',
+    'Receipt No,Date,Name,Flat / Shop No,Payment For Month,Payment Mode,Rupees,Maint. Contribution,Share Capital,Entrance Fees,Developments Fund,Penalty Interest,Total Amount',
+    'R-1001,2026-04-01,Amit Shah,A-101,April 2026,Online,,2500,1000,500,750,250,5000',
+    'R-1002,2026-04-01,Neha Desai,B-202,April 2026,UPI,,3000,1000,500,1000,500,6000',
   ]
   const blob = new Blob([sample.join('\n')], { type: 'text/csv;charset=utf-8' })
   const link = document.createElement('a')
@@ -263,6 +287,8 @@ function App() {
         date,
         name,
         flatShopNo,
+        paymentForMonth: formatPaymentMonth(getField('paymentForMonth'), date),
+        paymentMode: getField('paymentMode') || 'Online',
         rupeesText: getField('rupeesText') || toIndianWords(totalAmount),
         cashOrChequeNo,
         dated,
@@ -580,11 +606,10 @@ function ReceiptTemplate({ row }: { row: ReceiptRow }) {
               <strong>Rupees:</strong> <span>{row.rupeesText}</span>
             </p>
             <p>
-              <strong>Cash / Cheque No:</strong> <span>{row.cashOrChequeNo || '-'}</span>
-              <strong className="inline-gap">Dated:</strong> <span>{formatDate(row.dated)}</span>
+              <strong>Payment For:</strong> <span>{row.paymentForMonth}</span>
             </p>
             <p>
-              <strong>Bank:</strong> <span>{row.bank || '-'}</span>
+              <strong>Payment Mode:</strong> <span>{row.paymentMode}</span>
             </p>
           </div>
 
@@ -615,7 +640,7 @@ function ReceiptTemplate({ row }: { row: ReceiptRow }) {
         <footer className="receipt-footer">
           <div className="amount-box">
             <span className="currency">₹</span>
-            <span>{row.totalAmount.toLocaleString('en-IN')}</span>
+            <span >{row.totalAmount.toLocaleString('en-IN')}</span>
           </div>
           <div className="sign-block">
             <p>For, Swastik Rise Co. Op. Housing &amp; Commercial Society Ltd.</p>

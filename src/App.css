@@ -314,6 +314,13 @@
   margin-right: 10px;
 }
 
+.amount-value {
+  flex: 1;
+  display: block;
+  padding-right: 12px;
+  text-align: right;
+}
+
 .sign-block {
   text-align: right;
   display: grid;
