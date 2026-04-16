@@ -3,8 +3,7 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: process.env.GITHUB_ACTIONS
-    ? `/${(process.env.GITHUB_REPOSITORY ?? 'PrinceKapadiyaEPAM/ReceiptsGenerator').split('/')[1]}/`
-    : '/',
+  // Relative base avoids broken asset paths across different Pages URL setups.
+  base: './',
   plugins: [react()],
 })
