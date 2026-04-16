@@ -13,6 +13,14 @@
   box-shadow: 0 12px 30px rgba(40, 29, 19, 0.08);
 }
 
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
 .top-panel h1 {
   margin: 0;
   font-size: clamp(1.5rem, 2.8vw, 2.25rem);
@@ -21,6 +29,29 @@
 .subline {
   margin: 0.4rem 0 0;
   color: #65564a;
+}
+
+.screen-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.screen-tab {
+  border: 1px solid #6b5946;
+  background: #f6efe4;
+  color: #2f2116;
+  border-radius: 999px;
+  font-weight: 700;
+  padding: 0.62rem 1rem;
+  cursor: pointer;
+}
+
+.screen-tab.active {
+  background: #20150a;
+  color: #fff9ef;
+  border-color: #20150a;
 }
 
 .actions-row {
@@ -81,6 +112,34 @@
   border-radius: 8px;
   padding: 0.45rem;
   background: #fffefb;
+}
+
+.quick-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.quick-item {
+  display: grid;
+  gap: 0.35rem;
+  color: #3a2c20;
+}
+
+.quick-item input {
+  border: 1px solid #b9aa9a;
+  border-radius: 8px;
+  padding: 0.52rem;
+  background: #fffefb;
+}
+
+.quick-item small {
+  margin-top: -2px;
+}
+
+.quick-wide {
+  grid-column: 1 / -1;
 }
 
 .summary-grid {
@@ -173,7 +232,8 @@
 }
 
 .preview-receipt-page,
-.pdf-receipt-page {
+.pdf-receipt-page,
+.quick-pdf-page {
   width: 794px;
   height: 561px;
   overflow: hidden;
@@ -351,7 +411,15 @@
 }
 
 @media (max-width: 900px) {
+  .app-header {
+    align-items: flex-start;
+  }
+
   .mapping-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-grid {
     grid-template-columns: 1fr;
   }
 

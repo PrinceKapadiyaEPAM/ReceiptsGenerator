@@ -32,6 +32,23 @@ type RowError = {
   reason: string
 }
 
+type AppScreen = 'upload' | 'quick'
+
+type QuickFormValues = {
+  receiptNumber: string
+  date: string
+  name: string
+  flatShopNo: string
+  paymentForMonth: string
+  paymentMode: string
+  rupeesText: string
+  maintContribution: string
+  shareCapital: string
+  entranceFees: string
+  developmentsFund: string
+  penaltyInterest: string
+}
+
 const FIELD_LABELS: Record<string, string> = {
   receiptNumber: 'Receipt Number',
   date: 'Date',
@@ -52,6 +69,37 @@ const FIELD_LABELS: Record<string, string> = {
 }
 
 const REQUIRED_FIELDS = ['receiptNumber', 'date', 'name', 'flatShopNo', 'totalAmount']
+
+const QUICK_REQUIRED_FIELDS: Array<keyof QuickFormValues> = [
+  'receiptNumber',
+  'date',
+  'name',
+  'flatShopNo',
+  'paymentForMonth',
+  'paymentMode',
+]
+
+const QUICK_BREAKDOWN_FIELDS: Array<
+  keyof Pick<
+    QuickFormValues,
+    'maintContribution' | 'shareCapital' | 'entranceFees' | 'developmentsFund' | 'penaltyInterest'
+  >
+> = ['maintContribution', 'shareCapital', 'entranceFees', 'developmentsFund', 'penaltyInterest']
+
+const QUICK_LABELS: Record<keyof QuickFormValues, string> = {
+  receiptNumber: 'Receipt Number',
+  date: 'Date',
+  name: 'Name',
+  flatShopNo: 'Flat / Shop No',
+  paymentForMonth: 'Payment For Month',
+  paymentMode: 'Payment Mode',
+  rupeesText: 'Rupees (Text)',
+  maintContribution: 'Maint. Contribution',
+  shareCapital: 'Share Capital',
+  entranceFees: 'Entrance Fees',
+  developmentsFund: 'Developments Fund',
+  penaltyInterest: 'Penalty Interest',
+}
 
 const FIELD_ALIASES: Record<string, string[]> = {
   receiptNumber: ['receipt no', 'receipt number', 'receipt_no', 'receiptnumber'],
@@ -202,7 +250,130 @@ function downloadSampleCsv(): void {
   URL.revokeObjectURL(link.href)
 }
 
+function getInitialQuickForm(): QuickFormValues {
+  return {
+    receiptNumber: '',
+    date: new Date().toISOString().slice(0, 10),
+    name: '',
+    flatShopNo: '',
+    paymentForMonth: '',
+    paymentMode: 'Online',
+    rupeesText: '',
+    maintContribution: '',
+    shareCapital: '',
+    entranceFees: '',
+    developmentsFund: '',
+    penaltyInterest: '',
+  }
+}
+
+function getQuickTotalFromBreakdown(form: QuickFormValues): number {
+  const values = QUICK_BREAKDOWN_FIELDS.map((field) => parseAmount(form[field]))
+
+  return values.reduce((sum, value) => (Number.isNaN(value) ? sum : sum + value), 0)
+}
+
+function buildQuickPreviewRow(form: QuickFormValues, totalAmount: number): ReceiptRow {
+  const maintContribution = parseAmount(form.maintContribution)
+  const shareCapital = parseAmount(form.shareCapital)
+  const entranceFees = parseAmount(form.entranceFees)
+  const developmentsFund = parseAmount(form.developmentsFund)
+  const penaltyInterest = parseAmount(form.penaltyInterest)
+
+  const safeTotal = Number.isNaN(totalAmount) ? 0 : totalAmount
+
+  return {
+    sourceRow: 1,
+    receiptNumber: form.receiptNumber.trim(),
+    date: form.date.trim(),
+    name: form.name.trim(),
+    flatShopNo: form.flatShopNo.trim(),
+    paymentForMonth: formatPaymentMonth(form.paymentForMonth, form.date),
+    paymentMode: form.paymentMode.trim() || 'Online',
+    rupeesText: form.rupeesText.trim() || toIndianWords(safeTotal),
+    cashOrChequeNo: '',
+    dated: form.date.trim(),
+    bank: '',
+    maintContribution: Number.isNaN(maintContribution) ? 0 : maintContribution,
+    shareCapital: Number.isNaN(shareCapital) ? 0 : shareCapital,
+    entranceFees: Number.isNaN(entranceFees) ? 0 : entranceFees,
+    developmentsFund: Number.isNaN(developmentsFund) ? 0 : developmentsFund,
+    penaltyInterest: Number.isNaN(penaltyInterest) ? 0 : penaltyInterest,
+    totalAmount: safeTotal,
+  }
+}
+
+function validateQuickForm(form: QuickFormValues, totalAmount: number): {
+  errors: Partial<Record<keyof QuickFormValues, string>>
+  row: ReceiptRow | null
+  formError: string
+} {
+  const errors: Partial<Record<keyof QuickFormValues, string>> = {}
+  let formError = ''
+
+  QUICK_REQUIRED_FIELDS.forEach((field) => {
+    if (!form[field].trim()) {
+      errors[field] = `${QUICK_LABELS[field]} is required`
+    }
+  })
+
+  const maintContribution = parseAmount(form.maintContribution)
+  const shareCapital = parseAmount(form.shareCapital)
+  const entranceFees = parseAmount(form.entranceFees)
+  const developmentsFund = parseAmount(form.developmentsFund)
+  const penaltyInterest = parseAmount(form.penaltyInterest)
+
+  if (Number.isNaN(totalAmount) || totalAmount <= 0) {
+    formError = 'Total Amount must be greater than zero'
+  }
+
+  if (Number.isNaN(maintContribution)) {
+    errors.maintContribution = 'Maint. Contribution must be a valid number'
+  }
+  if (Number.isNaN(shareCapital)) {
+    errors.shareCapital = 'Share Capital must be a valid number'
+  }
+  if (Number.isNaN(entranceFees)) {
+    errors.entranceFees = 'Entrance Fees must be a valid number'
+  }
+  if (Number.isNaN(developmentsFund)) {
+    errors.developmentsFund = 'Developments Fund must be a valid number'
+  }
+  if (Number.isNaN(penaltyInterest)) {
+    errors.penaltyInterest = 'Penalty Interest must be a valid number'
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return { errors, row: null, formError }
+  }
+
+  return {
+    errors,
+    formError,
+    row: {
+      sourceRow: 1,
+      receiptNumber: form.receiptNumber.trim(),
+      date: form.date.trim(),
+      name: form.name.trim(),
+      flatShopNo: form.flatShopNo.trim(),
+      paymentForMonth: formatPaymentMonth(form.paymentForMonth, form.date),
+      paymentMode: form.paymentMode.trim() || 'Online',
+      rupeesText: form.rupeesText.trim() || toIndianWords(totalAmount),
+      cashOrChequeNo: '',
+      dated: form.date.trim(),
+      bank: '',
+      maintContribution,
+      shareCapital,
+      entranceFees,
+      developmentsFund,
+      penaltyInterest,
+      totalAmount,
+    },
+  }
+}
+
 function App() {
+  const [activeScreen, setActiveScreen] = useState<AppScreen>('upload')
   const [rawRows, setRawRows] = useState<RawRow[]>([])
   const [headers, setHeaders] = useState<string[]>([])
   const [mapping, setMapping] = useState<Record<string, string>>({})
@@ -211,6 +382,21 @@ function App() {
   const [processingError, setProcessingError] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [quickForm, setQuickForm] = useState<QuickFormValues>(getInitialQuickForm)
+  const [quickErrors, setQuickErrors] = useState<Partial<Record<keyof QuickFormValues, string>>>({})
+  const [quickProcessingError, setQuickProcessingError] = useState('')
+  const [isQuickGenerating, setIsQuickGenerating] = useState(false)
+
+  const quickTotalAmount = useMemo(
+    () => getQuickTotalFromBreakdown(quickForm),
+    [
+      quickForm.maintContribution,
+      quickForm.shareCapital,
+      quickForm.entranceFees,
+      quickForm.developmentsFund,
+      quickForm.penaltyInterest,
+    ],
+  )
 
   const autoMapping = useMemo(() => {
     const map: Record<string, string> = {}
@@ -437,136 +623,419 @@ function App() {
     }
   }
 
+  const quickPreviewRow = useMemo(() => buildQuickPreviewRow(quickForm, quickTotalAmount), [quickForm, quickTotalAmount])
+
+  async function generateQuickPdf(): Promise<void> {
+    const { row, errors, formError } = validateQuickForm(quickForm, quickTotalAmount)
+    setQuickErrors(errors)
+
+    if (!row) {
+      setQuickProcessingError(formError || 'Please fix form errors before generating the receipt PDF.')
+      return
+    }
+
+    setQuickProcessingError('')
+    setIsQuickGenerating(true)
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 120))
+      const quickPage = document.querySelector('.quick-pdf-page') as HTMLElement | null
+      if (!quickPage) {
+        throw new Error('Quick receipt preview is not available for export.')
+      }
+
+      const canvas = await html2canvas(quickPage, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+      })
+      if (canvas.width === 0 || canvas.height === 0) {
+        throw new Error('Failed to capture quick receipt content for PDF. Please try again.')
+      }
+
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      })
+      const imageWidth = 210
+      const imageHeight = (canvas.height / canvas.width) * imageWidth
+      const imageY = Math.max(0, (297 - imageHeight) / 2)
+
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, imageY, imageWidth, imageHeight)
+      const dateTag = new Date().toISOString().slice(0, 10)
+      const safeReceiptNumber = row.receiptNumber.replace(/[^a-zA-Z0-9-_]/g, '') || 'single'
+      pdf.save(`receipt-${safeReceiptNumber}-${dateTag}.pdf`)
+    } catch (error) {
+      setQuickProcessingError(error instanceof Error ? error.message : 'Failed to generate quick receipt PDF.')
+    } finally {
+      setIsQuickGenerating(false)
+    }
+  }
+
+  function onQuickFieldChange(field: keyof QuickFormValues, value: string): void {
+    setQuickForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }))
+
+    setQuickErrors((prev) => {
+      if (!prev[field]) {
+        return prev
+      }
+      const next = { ...prev }
+      delete next[field]
+      return next
+    })
+  }
+
+  function resetQuickForm(): void {
+    setQuickForm(getInitialQuickForm())
+    setQuickErrors({})
+    setQuickProcessingError('')
+  }
+
   return (
     <main className="app-shell">
-      <section className="panel top-panel">
+      <section className="panel app-header">
         <div>
           <h1>Receipts Generator</h1>
-          <p className="subline">Upload CSV/XLSX, map columns, validate rows, and export one merged PDF.</p>
+          <p className="subline">Switch between sheet upload and quick manual receipt generation.</p>
         </div>
-        <div className="actions-row">
-          <label className="upload-btn">
-            <input type="file" accept=".csv,.xlsx,.xls" onChange={handleFileUpload} disabled={loading || isGenerating} />
-            {loading ? 'Reading file...' : 'Upload Sheet'}
-          </label>
+        <div className="screen-tabs" role="tablist" aria-label="Receipt screens">
           <button type="button" className="sample-btn" onClick={downloadSampleCsv} disabled={loading || isGenerating}>
             Download Sample CSV
           </button>
+          <button
+            type="button"
+            className={`screen-tab ${activeScreen === 'upload' ? 'active' : ''}`}
+            onClick={() => setActiveScreen('upload')}
+          >
+            Upload from Sheet
+          </button>
+          <button
+            type="button"
+            className={`screen-tab ${activeScreen === 'quick' ? 'active' : ''}`}
+            onClick={() => setActiveScreen('quick')}
+          >
+            Quick Generate
+          </button>
         </div>
-        {fileName && <p className="file-meta">Loaded file: {fileName}</p>}
-        {processingError && <p className="error-text">{processingError}</p>}
       </section>
 
-      {headers.length > 0 && (
-        <section className="panel">
-          <h2>Column Mapping</h2>
-          <p className="subline">Adjust only if your header names differ from expected receipt fields.</p>
-          <div className="mapping-grid">
-            {Object.entries(FIELD_LABELS).map(([field, label]) => (
-              <label key={field} className="mapping-item">
-                <span>
-                  {label}
-                  {REQUIRED_FIELDS.includes(field) && <strong> *</strong>}
-                </span>
-                <select
-                  value={mapping[field] ?? ''}
-                  onChange={(event) => {
-                    const value = event.target.value
-                    setMapping((prev) => ({
-                      ...prev,
-                      [field]: value,
-                    }))
-                  }}
-                  disabled={isGenerating}
-                >
-                  <option value="">Auto</option>
-                  {headers.map((header) => (
-                    <option key={header} value={header}>
-                      {header}
-                    </option>
-                  ))}
-                </select>
+      {activeScreen === 'upload' && (
+        <>
+          <section className="panel top-panel">
+            <h2>Upload and Export</h2>
+            <p className="subline">Upload CSV/XLSX, map columns, validate rows, and export one merged PDF.</p>
+            <div className="actions-row">
+              <label className="upload-btn">
+                <input
+                  type="file"
+                  accept=".csv,.xlsx,.xls"
+                  onChange={handleFileUpload}
+                  disabled={loading || isGenerating}
+                />
+                {loading ? 'Reading file...' : 'Upload Sheet'}
               </label>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {rawRows.length > 0 && (
-        <section className="panel results-panel">
-          <h2>Validation Summary</h2>
-          <div className="summary-grid">
-            <article>
-              <h3>Total Rows</h3>
-              <p>{rawRows.length}</p>
-            </article>
-            <article>
-              <h3>Valid</h3>
-              <p className="good">{parsed.validRows.length}</p>
-            </article>
-            <article>
-              <h3>Invalid</h3>
-              <p className="bad">{parsed.invalidRows.length}</p>
-            </article>
-          </div>
-
-          {parsed.invalidRows.length > 0 && (
-            <div className="error-list">
-              <div className="error-list-head">
-                <h3>Invalid Rows</h3>
-                <button type="button" className="sample-btn" onClick={() => downloadErrorCsv(parsed.invalidRows)}>
-                  Download Error CSV
-                </button>
-              </div>
-              <ul>
-                {parsed.invalidRows.slice(0, 8).map((item) => (
-                  <li key={`${item.sourceRow}-${item.reason}`}>
-                    Row {item.sourceRow}: {item.reason}
-                  </li>
-                ))}
-              </ul>
-              {parsed.invalidRows.length > 8 && <p>Showing first 8 errors.</p>}
             </div>
+            {fileName && <p className="file-meta">Loaded file: {fileName}</p>}
+            {processingError && <p className="error-text">{processingError}</p>}
+          </section>
+
+          {headers.length > 0 && (
+            <section className="panel">
+              <h2>Column Mapping</h2>
+              <p className="subline">Adjust only if your header names differ from expected receipt fields.</p>
+              <div className="mapping-grid">
+                {Object.entries(FIELD_LABELS).map(([field, label]) => (
+                  <label key={field} className="mapping-item">
+                    <span>
+                      {label}
+                      {REQUIRED_FIELDS.includes(field) && <strong> *</strong>}
+                    </span>
+                    <select
+                      value={mapping[field] ?? ''}
+                      onChange={(event) => {
+                        const value = event.target.value
+                        setMapping((prev) => ({
+                          ...prev,
+                          [field]: value,
+                        }))
+                      }}
+                      disabled={isGenerating}
+                    >
+                      <option value="">Auto</option>
+                      {headers.map((header) => (
+                        <option key={header} value={header}>
+                          {header}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+            </section>
           )}
 
-          <div className="export-row">
-            <button
-              type="button"
-              className="export-btn"
-              onClick={generateMergedPdf}
-              disabled={parsed.validRows.length === 0 || isGenerating}
-            >
-              {isGenerating ? 'Generating PDF...' : 'Generate Merged PDF'}
-            </button>
-            <p className="size-note">Output: 2 receipts per A4 page (half-page each)</p>
-            {isGenerating && <p className="progress-text">Progress: {progress}%</p>}
-          </div>
-        </section>
+          {rawRows.length > 0 && (
+            <section className="panel results-panel">
+              <h2>Validation Summary</h2>
+              <div className="summary-grid">
+                <article>
+                  <h3>Total Rows</h3>
+                  <p>{rawRows.length}</p>
+                </article>
+                <article>
+                  <h3>Valid</h3>
+                  <p className="good">{parsed.validRows.length}</p>
+                </article>
+                <article>
+                  <h3>Invalid</h3>
+                  <p className="bad">{parsed.invalidRows.length}</p>
+                </article>
+              </div>
+
+              {parsed.invalidRows.length > 0 && (
+                <div className="error-list">
+                  <div className="error-list-head">
+                    <h3>Invalid Rows</h3>
+                    <button type="button" className="sample-btn" onClick={() => downloadErrorCsv(parsed.invalidRows)}>
+                      Download Error CSV
+                    </button>
+                  </div>
+                  <ul>
+                    {parsed.invalidRows.slice(0, 8).map((item) => (
+                      <li key={`${item.sourceRow}-${item.reason}`}>
+                        Row {item.sourceRow}: {item.reason}
+                      </li>
+                    ))}
+                  </ul>
+                  {parsed.invalidRows.length > 8 && <p>Showing first 8 errors.</p>}
+                </div>
+              )}
+
+              <div className="export-row">
+                <button
+                  type="button"
+                  className="export-btn"
+                  onClick={generateMergedPdf}
+                  disabled={parsed.validRows.length === 0 || isGenerating}
+                >
+                  {isGenerating ? 'Generating PDF...' : 'Generate Merged PDF'}
+                </button>
+                <p className="size-note">Output: 2 receipts per A4 page (half-page each)</p>
+                {isGenerating && <p className="progress-text">Progress: {progress}%</p>}
+              </div>
+            </section>
+          )}
+
+          {parsed.validRows.length > 0 && (
+            <section className="panel preview-panel">
+              <h2>Receipt Preview</h2>
+              <p className="subline">Half-page receipt preview. Export places 2 receipts on each A4 page.</p>
+              <div className="preview-wrap">
+                <div className="preview-receipt-page">
+                  <div className="receipt-slot">
+                    <ReceiptTemplate row={parsed.validRows[0]} />
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          <section className="pdf-staging" aria-hidden="true">
+            {parsed.validRows.map((row) => (
+              <div key={`${row.sourceRow}-${row.receiptNumber}`} className="pdf-receipt-page">
+                <div className="receipt-slot">
+                  <ReceiptTemplate row={row} />
+                </div>
+              </div>
+            ))}
+          </section>
+        </>
       )}
 
-      {parsed.validRows.length > 0 && (
-        <section className="panel preview-panel">
-          <h2>Receipt Preview</h2>
-          <p className="subline">Half-page receipt preview. Export places 2 receipts on each A4 page.</p>
-          <div className="preview-wrap">
-            <div className="preview-receipt-page">
-              <div className="receipt-slot">
-                <ReceiptTemplate row={parsed.validRows[0]} />
+      {activeScreen === 'quick' && (
+        <>
+          <section className="panel quick-panel">
+            <h2>Quick Generate Receipt</h2>
+            <p className="subline">Fill the form and generate one receipt PDF instantly.</p>
+
+            <div className="quick-grid">
+              <label className="quick-item">
+                <span>
+                  Receipt Number <strong>*</strong>
+                </span>
+                <input
+                  value={quickForm.receiptNumber}
+                  onChange={(event) => onQuickFieldChange('receiptNumber', event.target.value)}
+                  placeholder="R-2026-001"
+                />
+                {quickErrors.receiptNumber && <small className="error-text">{quickErrors.receiptNumber}</small>}
+              </label>
+
+              <label className="quick-item">
+                <span>
+                  Date <strong>*</strong>
+                </span>
+                <input
+                  type="date"
+                  value={quickForm.date}
+                  onChange={(event) => onQuickFieldChange('date', event.target.value)}
+                />
+                {quickErrors.date && <small className="error-text">{quickErrors.date}</small>}
+              </label>
+
+              <label className="quick-item">
+                <span>
+                  Name <strong>*</strong>
+                </span>
+                <input value={quickForm.name} onChange={(event) => onQuickFieldChange('name', event.target.value)} />
+                {quickErrors.name && <small className="error-text">{quickErrors.name}</small>}
+              </label>
+
+              <label className="quick-item">
+                <span>
+                  Flat / Shop No <strong>*</strong>
+                </span>
+                <input
+                  value={quickForm.flatShopNo}
+                  onChange={(event) => onQuickFieldChange('flatShopNo', event.target.value)}
+                />
+                {quickErrors.flatShopNo && <small className="error-text">{quickErrors.flatShopNo}</small>}
+              </label>
+
+              <label className="quick-item">
+                <span>
+                  Payment For Month <strong>*</strong>
+                </span>
+                <input
+                  value={quickForm.paymentForMonth}
+                  onChange={(event) => onQuickFieldChange('paymentForMonth', event.target.value)}
+                  placeholder="April 2026"
+                />
+                {quickErrors.paymentForMonth && <small className="error-text">{quickErrors.paymentForMonth}</small>}
+              </label>
+
+              <label className="quick-item">
+                <span>
+                  Payment Mode <strong>*</strong>
+                </span>
+                <input
+                  value={quickForm.paymentMode}
+                  onChange={(event) => onQuickFieldChange('paymentMode', event.target.value)}
+                  placeholder="Online"
+                />
+                {quickErrors.paymentMode && <small className="error-text">{quickErrors.paymentMode}</small>}
+              </label>
+
+              <label className="quick-item quick-wide">
+                <span>Rupees (Text)</span>
+                <input
+                  value={quickForm.rupeesText}
+                  onChange={(event) => onQuickFieldChange('rupeesText', event.target.value)}
+                  placeholder="Auto-generated from total if left empty"
+                />
+              </label>
+
+              <label className="quick-item">
+                <span>Maint. Contribution</span>
+                <input
+                  value={quickForm.maintContribution}
+                  onChange={(event) => onQuickFieldChange('maintContribution', event.target.value)}
+                  placeholder="0"
+                />
+                {quickErrors.maintContribution && <small className="error-text">{quickErrors.maintContribution}</small>}
+              </label>
+
+              <label className="quick-item">
+                <span>Share Capital</span>
+                <input
+                  value={quickForm.shareCapital}
+                  onChange={(event) => onQuickFieldChange('shareCapital', event.target.value)}
+                  placeholder="0"
+                />
+                {quickErrors.shareCapital && <small className="error-text">{quickErrors.shareCapital}</small>}
+              </label>
+
+              <label className="quick-item">
+                <span>Entrance Fees</span>
+                <input
+                  value={quickForm.entranceFees}
+                  onChange={(event) => onQuickFieldChange('entranceFees', event.target.value)}
+                  placeholder="0"
+                />
+                {quickErrors.entranceFees && <small className="error-text">{quickErrors.entranceFees}</small>}
+              </label>
+
+              <label className="quick-item">
+                <span>Developments Fund</span>
+                <input
+                  value={quickForm.developmentsFund}
+                  onChange={(event) => onQuickFieldChange('developmentsFund', event.target.value)}
+                  placeholder="0"
+                />
+                {quickErrors.developmentsFund && <small className="error-text">{quickErrors.developmentsFund}</small>}
+              </label>
+
+              <label className="quick-item">
+                <span>Penalty Interest</span>
+                <input
+                  value={quickForm.penaltyInterest}
+                  onChange={(event) => onQuickFieldChange('penaltyInterest', event.target.value)}
+                  placeholder="0"
+                />
+                {quickErrors.penaltyInterest && <small className="error-text">{quickErrors.penaltyInterest}</small>}
+              </label>
+
+              <label className="quick-item">
+                <span>
+                  Total Amount <strong>*</strong>
+                </span>
+                <input
+                  value={quickTotalAmount.toLocaleString('en-IN')}
+                  readOnly
+                  aria-readonly="true"
+                  title="Auto-calculated from breakup amounts"
+                />
+                <small className="subline">Auto-calculated from amount breakup fields</small>
+              </label>
+            </div>
+
+            <div className="actions-row">
+              <button type="button" className="export-btn" onClick={generateQuickPdf} disabled={isQuickGenerating}>
+                {isQuickGenerating ? 'Generating PDF...' : 'Generate Receipt PDF'}
+              </button>
+              <button type="button" className="sample-btn" onClick={resetQuickForm} disabled={isQuickGenerating}>
+                Reset Form
+              </button>
+              <p className="size-note">Output: single receipt PDF</p>
+            </div>
+
+            {quickProcessingError && <p className="error-text">{quickProcessingError}</p>}
+          </section>
+
+          <section className="panel preview-panel">
+            <h2>Quick Receipt Preview</h2>
+            <p className="subline">This preview is used to generate your single receipt PDF.</p>
+            <div className="preview-wrap">
+              <div className="preview-receipt-page">
+                <div className="receipt-slot">
+                  <ReceiptTemplate row={quickPreviewRow} />
+                </div>
               </div>
             </div>
-          </div>
-        </section>
-      )}
+          </section>
 
-      <section className="pdf-staging" aria-hidden="true">
-        {parsed.validRows.map((row) => (
-          <div key={`${row.sourceRow}-${row.receiptNumber}`} className="pdf-receipt-page">
-            <div className="receipt-slot">
-              <ReceiptTemplate row={row} />
+          <section className="pdf-staging" aria-hidden="true">
+            <div className="quick-pdf-page">
+              <div className="receipt-slot">
+                <ReceiptTemplate row={quickPreviewRow} />
+              </div>
             </div>
-          </div>
-        ))}
-      </section>
+          </section>
+        </>
+      )}
     </main>
   )
 }
@@ -640,7 +1109,7 @@ function ReceiptTemplate({ row }: { row: ReceiptRow }) {
         <footer className="receipt-footer">
           <div className="amount-box">
             <span className="currency">₹</span>
-            <span >{row.totalAmount.toLocaleString('en-IN')}</span>
+            <span className="amount-value">{row.totalAmount.toLocaleString('en-IN')}</span>
           </div>
           <div className="sign-block">
             <p>For, Swastik Rise Co. Op. Housing &amp; Commercial Society Ltd.</p>
