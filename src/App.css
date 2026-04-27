@@ -1,24 +1,25 @@
 .app-shell {
   width: min(1120px, 100% - 2rem);
-  margin: 1.2rem auto 2.5rem;
+  margin: 0.8rem auto 2.5rem;
   display: grid;
   gap: 1rem;
 }
 
-.panel {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #c7bbb0;
-  border-radius: 16px;
-  padding: 1rem;
-  box-shadow: 0 12px 30px rgba(40, 29, 19, 0.08);
+.app-admin-layout {
+  min-height: 100vh;
+}
+
+.app-admin-layout .app-main {
+  background: transparent;
 }
 
 .app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.8rem;
-  flex-wrap: wrap;
+  margin-bottom: 0;
+}
+
+.app-menu-toggle {
+  min-width: 2.2rem;
+  text-align: center;
 }
 
 .top-panel h1 {
@@ -26,32 +27,33 @@
   font-size: clamp(1.5rem, 2.8vw, 2.25rem);
 }
 
+.nav-link-btn {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.app-sidebar .sidebar-brand {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.95rem 1rem;
+}
+
+.app-sidebar .brand-text {
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+}
+
+.sidebar-menu .nav-link p {
+  margin: 0;
+}
+
 .subline {
   margin: 0.4rem 0 0;
   color: #65564a;
-}
-
-.screen-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.screen-tab {
-  border: 1px solid #6b5946;
-  background: #f6efe4;
-  color: #2f2116;
-  border-radius: 999px;
-  font-weight: 700;
-  padding: 0.62rem 1rem;
-  cursor: pointer;
-}
-
-.screen-tab.active {
-  background: #20150a;
-  color: #fff9ef;
-  border-color: #20150a;
 }
 
 .actions-row {
@@ -59,28 +61,6 @@
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
-}
-
-.upload-btn,
-.sample-btn,
-.export-btn {
-  border: 1px solid #251709;
-  background: #20150a;
-  color: #fcf8f2;
-  border-radius: 999px;
-  font-weight: 600;
-  padding: 0.65rem 1.1rem;
-  cursor: pointer;
-  text-decoration: none;
-}
-
-.sample-btn {
-  background: #f2ebde;
-  color: #2a1e12;
-}
-
-.upload-btn input {
-  display: none;
 }
 
 .file-meta {
@@ -94,106 +74,6 @@
   font-weight: 600;
 }
 
-.mapping-grid {
-  margin-top: 1rem;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.8rem;
-}
-
-.mapping-item {
-  display: grid;
-  gap: 0.35rem;
-  color: #3a2c20;
-}
-
-.mapping-item select {
-  border: 1px solid #b9aa9a;
-  border-radius: 8px;
-  padding: 0.45rem;
-  background: #fffefb;
-}
-
-.quick-grid {
-  margin-top: 1rem;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.8rem;
-}
-
-.quick-item {
-  display: grid;
-  gap: 0.35rem;
-  color: #3a2c20;
-}
-
-.quick-item input {
-  border: 1px solid #b9aa9a;
-  border-radius: 8px;
-  padding: 0.52rem;
-  background: #fffefb;
-}
-
-.quick-item small {
-  margin-top: -2px;
-}
-
-.quick-wide {
-  grid-column: 1 / -1;
-}
-
-.summary-grid {
-  margin-top: 0.7rem;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.7rem;
-}
-
-.summary-grid article {
-  border: 1px solid #d4c8bb;
-  border-radius: 10px;
-  padding: 0.7rem;
-  background: #fff;
-}
-
-.summary-grid h3 {
-  margin: 0;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.summary-grid p {
-  margin: 0.35rem 0 0;
-  font-size: 1.35rem;
-  font-weight: 700;
-}
-
-.good {
-  color: #135f27;
-}
-
-.bad {
-  color: #ab1818;
-}
-
-.error-list {
-  margin-top: 0.9rem;
-  border-top: 1px dashed #bbaea0;
-  padding-top: 0.8rem;
-}
-
-.error-list-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.8rem;
-}
-
-.error-list ul {
-  margin: 0.5rem 0 0;
-  padding-left: 1.2rem;
-}
 
 .export-row {
   margin-top: 1rem;
@@ -411,20 +291,8 @@
 }
 
 @media (max-width: 900px) {
-  .app-header {
-    align-items: flex-start;
-  }
-
-  .mapping-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .quick-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .summary-grid {
-    grid-template-columns: 1fr;
+  .app-shell {
+    width: min(1120px, 100% - 1rem);
   }
 
   .preview-wrap .preview-receipt-page {

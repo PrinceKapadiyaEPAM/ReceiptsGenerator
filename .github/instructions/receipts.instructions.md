@@ -21,9 +21,6 @@ Apply these rules when working on receipt-related code.
 - `name`
 - `flatShopNo`
 - `rupeesText`
-- `cashOrChequeNo`
-- `dated`
-- `bank`
 - `amountBreakdown` (object with receipt table fields)
 - `totalAmount`
 2. Implement explicit column mapping UI for unknown headers.

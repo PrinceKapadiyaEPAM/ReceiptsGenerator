@@ -1,0 +1,29 @@
+{
+  "name": "api",
+  "version": "1.0.0",
+  "description": "Receipts backend API with PostgreSQL integration",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "check": "node -e \"const { initDb, closePool } = require('./src/db/client'); initDb().then(() => closePool()).then(() => console.log('DB initialized')).catch((err) => { console.error(err); process.exit(1); });\""
+  },
+  "keywords": [
+    "receipts",
+    "express",
+    "postgresql"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "helmet": "^8.1.0",
+    "morgan": "^1.10.1",
+    "pdfkit": "^0.18.0",
+    "pg": "^8.20.0",
+    "zod": "^4.3.6"
+  }
+}

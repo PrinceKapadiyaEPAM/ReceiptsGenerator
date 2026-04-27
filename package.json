@@ -7,11 +7,19 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "email:server": "node server/smtpEmailServer.mjs",
+    "api:dev": "node --watch server/api/src/server.js",
+    "api:start": "node server/api/src/server.js"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.2.0",
+    "admin-lte": "^4.0.0-rc7",
+    "bootstrap": "^5.3.8",
+    "dotenv": "^16.6.1",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
+    "nodemailer": "^6.10.1",
     "papaparse": "^5.5.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

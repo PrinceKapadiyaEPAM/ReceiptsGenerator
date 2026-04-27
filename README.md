@@ -71,3 +71,26 @@ export default defineConfig([
   },
 ])
 ```
+
+## Backend API Project
+
+A standalone Node.js backend has been added under `server/api` for server-side features.
+
+### Run from workspace root
+
+- `npm run api:dev`
+- `npm run api:start`
+
+### Run directly in API project
+
+1. `cd server/api`
+2. `npm install`
+3. Copy `.env.example` to `.env`
+4. `npm run dev`
+
+### Included API routes
+
+- `GET /api/health`
+- `GET /api/v1/receipts`
+- `GET /api/v1/receipts/:id`
+- `POST /api/v1/receipts`
