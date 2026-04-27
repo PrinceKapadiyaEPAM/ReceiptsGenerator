@@ -654,7 +654,7 @@ function App() {
       for (let i = 0; i < pages.length; i++) {
         const row = parsed.validRows[i]
         const monthTag = paymentMonthToTag(row.paymentForMonth)
-        const baseName = `${monthTag}_${row.receiptNumber.replace(/[^a-zA-Z0-9-_]/g, '') || `R${row.sourceRow}`}`
+        const baseName = `${monthTag}_${row.flatShopNo.replace(/[^a-zA-Z0-9-_]/g, '') || `R${row.sourceRow}`}`
         const uniqueKey = baseName
         usedNames[uniqueKey] = (usedNames[uniqueKey] ?? 0) + 1
         const fileName = usedNames[uniqueKey] > 1 ? `${baseName}_${usedNames[uniqueKey]}.pdf` : `${baseName}.pdf`
