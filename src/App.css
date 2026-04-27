@@ -397,6 +397,14 @@
   font-size: 22px;
 }
 
+.system-note {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: #555;
+  text-align: center;
+  font-style: italic;
+}
+
 .pdf-staging {
   position: fixed;
   left: -10000px;

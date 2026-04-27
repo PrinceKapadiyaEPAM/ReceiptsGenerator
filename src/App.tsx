@@ -3,6 +3,7 @@ import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
+import JSZip from 'jszip'
 import './App.css'
 
 type RawRow = Record<string, string>
@@ -623,6 +624,77 @@ function App() {
     }
   }
 
+  function paymentMonthToTag(paymentForMonth: string): string {
+    if (!paymentForMonth) return 'Unknown'
+    // 'April 2026' → 'Apr-2026'
+    const dt = new Date(paymentForMonth)
+    if (!Number.isNaN(dt.getTime())) {
+      const mon = dt.toLocaleString('en-US', { month: 'short' })
+      return `${mon}-${dt.getFullYear()}`
+    }
+    // fallback: keep as-is but replace spaces
+    return paymentForMonth.replace(/\s+/g, '-')
+  }
+
+  async function generateIndividualPdfs(): Promise<void> {
+    if (parsed.validRows.length === 0) return
+
+    setIsGenerating(true)
+    setProgress(0)
+    setProcessingError('')
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 180))
+      const pages = Array.from(document.querySelectorAll('.pdf-receipt-page')) as HTMLElement[]
+      if (pages.length === 0) throw new Error('No receipt pages found for export.')
+
+      const zip = new JSZip()
+      const usedNames: Record<string, number> = {}
+
+      for (let i = 0; i < pages.length; i++) {
+        const row = parsed.validRows[i]
+        const monthTag = paymentMonthToTag(row.paymentForMonth)
+        const baseName = `${monthTag}_${row.receiptNumber.replace(/[^a-zA-Z0-9-_]/g, '') || `R${row.sourceRow}`}`
+        const uniqueKey = baseName
+        usedNames[uniqueKey] = (usedNames[uniqueKey] ?? 0) + 1
+        const fileName = usedNames[uniqueKey] > 1 ? `${baseName}_${usedNames[uniqueKey]}.pdf` : `${baseName}.pdf`
+
+        const canvas = await html2canvas(pages[i], {
+          scale: 2,
+          backgroundColor: '#ffffff',
+        })
+        if (canvas.width === 0 || canvas.height === 0) {
+          throw new Error(`Failed to capture receipt for row ${row.sourceRow}.`)
+        }
+
+        const pdf = new jsPDF({
+          orientation: 'landscape',
+          unit: 'mm',
+          format: [210, 148.5],
+        })
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 210, 148.5)
+        zip.file(fileName, pdf.output('blob'))
+
+        setProgress(Math.round(((i + 1) / pages.length) * 100))
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(zipBlob)
+      const zipTag = paymentMonthToTag(parsed.validRows[0].paymentForMonth)
+      link.download = `receipts-${zipTag}.zip`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(link.href)
+    } catch (error) {
+      setProcessingError(error instanceof Error ? error.message : 'Failed to generate individual PDFs.')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
   const quickPreviewRow = useMemo(() => buildQuickPreviewRow(quickForm, quickTotalAmount), [quickForm, quickTotalAmount])
 
   async function generateQuickPdf(): Promise<void> {
@@ -823,7 +895,15 @@ function App() {
                 >
                   {isGenerating ? 'Generating PDF...' : 'Generate Merged PDF'}
                 </button>
-                <p className="size-note">Output: 2 receipts per A4 page (half-page each)</p>
+                <button
+                  type="button"
+                  className="export-btn"
+                  onClick={generateIndividualPdfs}
+                  disabled={parsed.validRows.length === 0 || isGenerating}
+                >
+                  {isGenerating ? 'Generating PDFs...' : 'Generate Individual PDFs'}
+                </button>
+                <p className="size-note">Output: 2 receipts per A4 page (merged) · or one PDF per receipt (individual, zipped)</p>
                 {isGenerating && <p className="progress-text">Progress: {progress}%</p>}
               </div>
             </section>
@@ -1113,9 +1193,10 @@ function ReceiptTemplate({ row }: { row: ReceiptRow }) {
           </div>
           <div className="sign-block">
             <p>For, Swastik Rise Co. Op. Housing &amp; Commercial Society Ltd.</p>
-            <strong>Receiver Signature</strong>
+            <strong>Signature</strong>
           </div>
         </footer>
+        <p className="system-note">This is a system-generated receipt and does not require a signature.</p>
       </div>
     </article>
   )
